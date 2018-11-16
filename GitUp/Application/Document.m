@@ -1,4 +1,4 @@
-//  Copyright (C) 2015-2017 Pierre-Olivier Latour <info@pol-online.net>
+//  Copyright (C) 2015-2018 Pierre-Olivier Latour <info@pol-online.net>
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -447,19 +447,15 @@ static void _CheckTimerCallBack(CFRunLoopTimerRef timer, void* info) {
   [_repository performOperationInBackgroundWithReason:@"clone"
       argument:nil
       usingOperationBlock:^BOOL(GCRepository* repository, NSError** outError) {
-
         return [repository cloneUsingRemote:remote recursive:recursive error:outError];
-
       }
       completionBlock:^(BOOL success, NSError* error) {
-
         [_repository resumeHistoryUpdates];
         if (!success) {
           [self presentError:error];
         }
         [self _prepareSearch];
         [self _resetCheckTimer];
-
       }];
 }
 
@@ -467,17 +463,13 @@ static void _CheckTimerCallBack(CFRunLoopTimerRef timer, void* info) {
   [_repository performOperationInBackgroundWithReason:nil
       argument:nil
       usingOperationBlock:^BOOL(GCRepository* repository, NSError** outError) {
-
         return [repository initializeAllSubmodules:YES error:outError];
-
       }
       completionBlock:^(BOOL success, NSError* error) {
-
         if (!success) {
           [self presentError:error];
         }
         [self _resetCheckTimer];
-
       }];
 }
 
@@ -490,7 +482,6 @@ static void _CheckTimerCallBack(CFRunLoopTimerRef timer, void* info) {
   __block CFTimeInterval lastTime = 0.0;
   [_repository prepareSearchInBackground:[[_repository userInfoForKey:kRepositoryUserInfoKey_IndexDiffs] boolValue]
       withProgressHandler:^BOOL(BOOL firstUpdate, NSUInteger addedCommits, NSUInteger removedCommits) {
-
         if (firstUpdate) {
           float progress = MIN(roundf(1000 * (float)addedCommits / (float)totalCount) / 10, 100.0);
           if (progress > lastProgress) {
@@ -509,10 +500,8 @@ static void _CheckTimerCallBack(CFRunLoopTimerRef timer, void* info) {
           }
         }
         return !_abortIndexing;
-
       }
       completion:^(BOOL success, NSError* error) {
-
         if (!_abortIndexing) {  // If indexing has been aborted, this means the document has already been closed, so don't attempt to do *anything*
           if (success) {
             _searchReady = YES;
@@ -525,7 +514,6 @@ static void _CheckTimerCallBack(CFRunLoopTimerRef timer, void* info) {
           [[NSProcessInfo processInfo] enableSuddenTermination];
           _indexing = NO;
         }
-
       }];
 }
 
@@ -562,14 +550,12 @@ static void _CheckTimerCallBack(CFRunLoopTimerRef timer, void* info) {
         alert.showsSuppressionButton = YES;
         [alert beginSheetModalForWindow:_mainWindow
                   withCompletionHandler:^(NSInteger returnCode) {
-
                     if (alert.suppressionButton.state) {
                       [_repository setUserInfo:@(YES) forKey:kRepositoryUserInfoKey_SkipSubmoduleCheck];
                     }
                     if (returnCode == NSAlertDefaultReturn) {
                       [self _initializeSubmodules];
                     }
-
                   }];
         return;  // Don't do anything else
       } else {
@@ -1302,7 +1288,7 @@ static NSString* _StringFromRepositoryState(GCRepositoryState state) {
 
 - (NSArray*)toolbarDefaultItemIdentifiers:(NSToolbar*)toolbar {
   if (_unifiedToolbar) {
-    return @[ kToolbarItem_Left, kToolbarItem_Title, NSToolbarSpaceItemIdentifier, kToolbarItem_Right ];
+    return @[ kToolbarItem_Left, kToolbarItem_Title, kToolbarItem_Right ];
   }
   return @[ kToolbarItem_Left, NSToolbarFlexibleSpaceItemIdentifier, kToolbarItem_Right ];
 }
@@ -1809,7 +1795,6 @@ static NSString* _StringFromRepositoryState(GCRepositoryState state) {
   [alert addButtonWithTitle:NSLocalizedString(@"Cancel", nil)];
   [alert beginSheetModalForWindow:_mainWindow
             withCompletionHandler:^(NSInteger returnCode) {
-
               if (returnCode == NSAlertFirstButtonReturn) {
                 NSError* error;
                 if (![_repository resetToHEAD:kGCResetMode_Hard error:&error] || (_untrackedButton.state && ![_repository cleanWorkingDirectory:&error]) || ![_repository updateAllSubmodulesResursively:YES error:&error]) {
@@ -1817,7 +1802,6 @@ static NSString* _StringFromRepositoryState(GCRepositoryState state) {
                 }
                 [_repository notifyRepositoryChanged];
               }
-
             }];
 }
 
@@ -1838,6 +1822,7 @@ static NSString* _StringFromRepositoryState(GCRepositoryState state) {
   view.frame = NSOffsetRect(newViewFrame, viewFrame.size.width, 0);
   [_mapContainerView addSubview:view positioned:NSWindowAbove relativeTo:_mapView];
 
+#if 0  // TODO: On 10.13, the first time the view is shown after animating, it is completely empty
   [NSAnimationContext beginGrouping];
   [[NSAnimationContext currentContext] setDuration:kSideViewAnimationDuration];
   if (completion) {
@@ -1848,6 +1833,13 @@ static NSString* _StringFromRepositoryState(GCRepositoryState state) {
   [_mapView.animator setFrame:newMapFrame];
   [view.animator setFrame:newViewFrame];
   [NSAnimationContext endGrouping];
+#else
+  [_mapView setFrame:newMapFrame];
+  [view setFrame:newViewFrame];
+  if (completion) {
+    completion();
+  }
+#endif
   [self _updateToolBar];
 
   [self _showHelpWithIdentifier:identifier];
@@ -2040,7 +2032,6 @@ static NSString* _StringFromRepositoryState(GCRepositoryState state) {
     _checkingForChanges = YES;
     NSString* path = _repository.repositoryPath;  // Avoid race-condition in case _repository is set to nil before block is executed
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-
       NSMutableDictionary* updatedReferences = [[NSMutableDictionary alloc] init];
       GCRepository* repository = [[GCRepository alloc] initWithExistingLocalRepository:path error:NULL];
       repository.delegate = (id<GCRepositoryDelegate>)self.class;  // Don't use self as we don't want to show progress UI nor authentication prompts
@@ -2058,7 +2049,6 @@ static NSString* _StringFromRepositoryState(GCRepositoryState state) {
         }
       }
       dispatch_async(dispatch_get_main_queue(), ^{
-
         if (_repository) {
           _updatedReferences = updatedReferences;
           if (_updatedReferences.count) {
@@ -2077,9 +2067,7 @@ static NSString* _StringFromRepositoryState(GCRepositoryState state) {
         } else {
           XLOG_WARNING(@"Remote check completed after document was closed");
         }
-
       });
-
     });
   } else {
     XLOG_DEBUG_UNREACHABLE();  // Not sure how this can happen but it has in the field
